@@ -1,6 +1,7 @@
 const express = require('express');
 const { Todo } = require('../mongo')
 const router = express.Router();
+const redis = require('../redis')
 
 /* GET todos listing. */
 router.get('/', async (_, res) => {
@@ -10,6 +11,13 @@ router.get('/', async (_, res) => {
 
 /* POST todo to listing. */
 router.post('/', async (req, res) => {
+  // Lisää todo-laskurin arvoa yhdellä
+  //await redis.setAsync('added_todos', (await redis.getAsync('added_todos') || 0) + 1);
+
+  const currentCount = await redis.getAsync('added_todos') || 0;
+  const newCount = parseInt(currentCount) + 1;
+  await redis.setAsync('added_todos', newCount);
+
   const todo = await Todo.create({
     text: req.body.text,
     done: false
@@ -34,13 +42,30 @@ singleRouter.delete('/', async (req, res) => {
 });
 
 /* GET todo. */
-singleRouter.get('/', async (req, res) => {
-  res.sendStatus(405); // Implement this
+router.get('/:id', async (req, res) => {
+  try {
+    const todo = await Todo.findById(req.params.id);
+    if (!todo) {
+      return res.status(404).json({ error: 'Todo not found' });
+    }
+    res.json(todo);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
+
 /* PUT todo. */
-singleRouter.put('/', async (req, res) => {
-  res.sendStatus(405); // Implement this
+router.put('/:id', async (req, res) => {
+  try {
+    const todo = await Todo.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!todo) {
+      return res.status(404).json({ error: 'Todo not found' });
+    }
+    res.json(todo);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
 router.use('/:id', findByIdMiddleware, singleRouter)
