@@ -1,6 +1,19 @@
 version: '3.8'
 
 services:
+  server:
+    image: todo-backend
+    build:
+      context: .
+      dockerfile: dev.Dockerfile
+    volumes:
+      - .:/usr/src/app
+    ports:
+      - "3000:3000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - MONGO_URL=mongodb://mongo:3456/the_database
+
   mongo:
     image: mongo
     ports:
